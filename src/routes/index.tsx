@@ -62,7 +62,7 @@ function Kiosk() {
             </svg>
           </button>
           <span className="font-display text-[15px] uppercase tracking-[0.28em] text-foreground/80">
-            Café Alvorada
+             ANOTHER COFFEE
           </span>
           <button
             type="button"
