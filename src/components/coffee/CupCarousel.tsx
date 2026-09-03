@@ -60,14 +60,15 @@ export function CupCarousel({ drinks, index, onIndexChange, onSelect, compact, l
           style = { transform: "translate(-50%, 0) scale(1)", opacity: 1, zIndex: 30 };
         } else {
           const o = Math.min(abs, 3);
-          // Side items: spread left/right, smaller and slightly further back.
+          // Side items: spread left/right, smaller and further back.
+          const shift = o === 1 ? 62 : o === 2 ? 100 : 130;
           style = {
-            transform: `translate(calc(-50% + ${side * (48 + (o - 1) * 30)}%), ${-o * 4}%) scale(${
-              1 - o * 0.26
+            transform: `translate(calc(-50% + ${side * shift}%), ${-o * 3}%) scale(${
+              o === 1 ? 0.58 : 0.4
             })`,
-            opacity: o > 2 ? 0 : 0.9 - o * 0.3,
+            opacity: o > 2 ? 0 : o === 1 ? 0.6 : 0.25,
             zIndex: 30 - o * 10,
-            filter: `blur(${(o - 1) * 1.5}px)`,
+            filter: `blur(${o === 1 ? 0.6 : 2}px)`,
           };
         }
         return (
@@ -94,7 +95,7 @@ export function CupCarousel({ drinks, index, onIndexChange, onSelect, compact, l
               height={1536}
               loading={k === 0 ? "eager" : "lazy"}
               draggable={false}
-              className={`h-full w-auto max-w-[70vw] object-contain object-bottom drop-shadow-[0_40px_50px_rgba(60,40,15,0.28)] ${
+              className={`h-full w-auto max-w-[min(72vw,320px)] object-contain object-bottom drop-shadow-[0_40px_50px_rgba(60,40,15,0.28)] ${
                 offset === 0 && !compact ? "animate-float-cup" : ""
               }`}
             />
