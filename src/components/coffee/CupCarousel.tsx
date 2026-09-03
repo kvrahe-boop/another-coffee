@@ -6,8 +6,8 @@ type Props = {
   index: number;
   onIndexChange: (i: number) => void;
   onSelect: (drink: Product) => void;
-  compact?: boolean;
-  label?: string;
+  compact?: boolean | undefined;
+  label?: string | undefined;
 };
 
 /** Product queue: the current item takes the centre, the previous and next ones peek on both sides. */
