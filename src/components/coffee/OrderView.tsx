@@ -1,51 +1,30 @@
-import { useState } from "react";
 import { brl, type OrderItem } from "@/lib/coffee-data";
 
 type Props = {
   items: OrderItem[];
   onRemove: (key: string) => void;
-  onBack: () => void;
-  onClear: () => void;
+  onCheckout: () => void;
+  onContinue: () => void;
 };
 
-export function OrderView({ items, onRemove, onBack, onClear }: Props) {
-  const [sent, setSent] = useState<number | null>(null);
+export function OrderView({ items, onRemove, onCheckout, onContinue }: Props) {
   const total = items.reduce((a, i) => a + i.price, 0);
-
-  if (sent !== null) {
-    return (
-      <div className="animate-sheet-up flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          Pedido nº {String(sent).padStart(3, "0")}
-        </p>
-        <h1 className="font-display text-[2.4rem] leading-[0.95] tracking-tight text-balance">
-          Enviado para a cozinha
-        </h1>
-        <p className="max-w-[28ch] text-sm text-muted-foreground">
-          Seu pedido já está sendo preparado. Retire no balcão quando o número for chamado.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            onClear();
-            onBack();
-          }}
-          className="mt-4 rounded-full bg-primary px-8 py-4 text-sm font-medium text-primary-foreground"
-        >
-          Novo pedido
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="animate-sheet-up flex flex-1 flex-col px-6 pb-6">
       <h1 className="font-display text-3xl font-semibold tracking-tight">Meu Pedido</h1>
 
       {items.length === 0 ? (
-        <p className="mt-10 text-center text-sm text-muted-foreground">
-          Nenhum item ainda. Toque em um copo para começar.
-        </p>
+        <div className="mt-10 flex flex-col items-center gap-4 text-center">
+          <p className="text-sm text-muted-foreground">Nenhum item ainda.</p>
+          <button
+            type="button"
+            onClick={onContinue}
+            className="rounded-full px-6 py-3 text-sm font-medium ring-1 ring-foreground"
+          >
+            Ver cardápio
+          </button>
+        </div>
       ) : (
         <>
           <ul className="mt-5 divide-y divide-border">
@@ -76,7 +55,7 @@ export function OrderView({ items, onRemove, onBack, onClear }: Props) {
             ))}
           </ul>
 
-          <div className="relative mx-auto my-6 flex h-56 w-full max-w-[280px] items-end justify-center">
+          <div className="relative mx-auto my-6 flex h-48 w-full max-w-[280px] items-end justify-center">
             {items.slice(0, 3).map((it, i) => (
               <img
                 key={it.key}
@@ -102,14 +81,18 @@ export function OrderView({ items, onRemove, onBack, onClear }: Props) {
             </div>
             <button
               type="button"
-              onClick={() => setSent(Math.floor(Math.random() * 900) + 100)}
+              onClick={onCheckout}
               className="mt-4 w-full rounded-full bg-primary py-4 text-sm font-medium tracking-wide text-primary-foreground transition-transform active:scale-[0.99]"
             >
               Finalizar pedido ({brl(total)})
             </button>
-            <p className="mt-3 text-center text-[11px] text-muted-foreground">
-              Vai direto para a cozinha
-            </p>
+            <button
+              type="button"
+              onClick={onContinue}
+              className="mt-3 w-full py-2 text-center text-[12px] font-medium uppercase tracking-[0.18em] text-muted-foreground"
+            >
+              + Adicionar mais itens
+            </button>
           </div>
         </>
       )}
