@@ -103,7 +103,7 @@ function Kiosk() {
           </div>
         ) : (
           <>
-            <div className={`shrink-0 ${selected ? "pt-2" : "pt-10"}`}>
+            <div className={`shrink-0 ${selected ? "pt-2" : "pt-6"}`}>
               <CupCarousel
                 drinks={drinks}
                 index={index}

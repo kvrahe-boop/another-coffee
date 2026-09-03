@@ -36,7 +36,7 @@ export function CupCarousel({ drinks, index, onIndexChange, onSelect, compact }:
   return (
     <div
       className={`relative w-full select-none touch-pan-y transition-[height] duration-500 ${
-        compact ? "h-[38vh]" : "h-[68vh]"
+        compact ? "h-[36vh]" : "h-[72vh]"
       }`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -90,7 +90,7 @@ export function CupCarousel({ drinks, index, onIndexChange, onSelect, compact }:
               height={1536}
               loading={k === 0 ? "eager" : "lazy"}
               draggable={false}
-              className={`h-full w-auto object-contain drop-shadow-[0_40px_50px_rgba(60,40,15,0.28)] ${
+              className={`h-full w-auto scale-[1.28] origin-bottom object-contain drop-shadow-[0_40px_50px_rgba(60,40,15,0.28)] ${
                 offset === 0 && !compact ? "animate-float-cup" : ""
               }`}
             />
