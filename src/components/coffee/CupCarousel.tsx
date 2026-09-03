@@ -90,7 +90,7 @@ export function CupCarousel({ drinks, index, onIndexChange, onSelect, compact }:
               height={1536}
               loading={k === 0 ? "eager" : "lazy"}
               draggable={false}
-              className={`h-full w-auto scale-[1.38] translate-y-[14%] object-contain drop-shadow-[0_40px_50px_rgba(60,40,15,0.28)] ${
+              className={`h-full w-auto object-contain drop-shadow-[0_40px_50px_rgba(60,40,15,0.28)] ${
                 offset === 0 && !compact ? "animate-float-cup" : ""
               }`}
             />
