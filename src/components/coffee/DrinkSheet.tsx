@@ -1,17 +1,6 @@
-import { useState } from "react";
-import {
-  brl,
-  categories,
-  milks,
-  sizes,
-  sugars,
-  sweets,
-  type Milk,
-  type OrderItem,
-  type Product,
-  type SizeId,
-  type Sugar,
-} from "@/lib/coffee-data";
+import { useMemo, useState } from "react";
+import { useMenu } from "@/lib/menu-store";
+import { brl, uid, type ChosenOption, type ModifierGroup, type OrderItem, type Product } from "@/lib/menu-types";
 
 type Props = {
   drink: Product;
@@ -22,17 +11,20 @@ function Chip({
   active,
   children,
   onClick,
+  disabled,
 }: {
   active: boolean;
   children: React.ReactNode;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={active}
-      className={`rounded-full px-4 py-2 text-sm font-medium transition-colors active:scale-95 ${
+      className={`rounded-full px-4 py-2 text-sm font-medium transition-colors active:scale-95 disabled:opacity-40 ${
         active
           ? "bg-primary text-primary-foreground"
           : "text-foreground/60 ring-1 ring-border hover:text-foreground"
@@ -43,43 +35,93 @@ function Chip({
   );
 }
 
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
 export function DrinkSheet({ drink, onAdd }: Props) {
-  const kind = categories.find((c) => c.id === drink.category)?.kind ?? "food";
-  const isDrink = kind === "drink";
+  const { menu, product } = useMenu();
 
-  const [size, setSize] = useState<SizeId>("M");
-  const [milk, setMilk] = useState<Milk>("Integral");
-  const [sugar, setSugar] = useState<Sugar>("Normal");
+  // Só os grupos ligados a este produto aparecem (sem leite → não mostra leite).
+  const groups = useMemo(
+    () =>
+      drink.modifierGroupIds
+        .map((id) => menu.modifierGroups.find((g) => g.id === id))
+        .filter((g): g is ModifierGroup => !!g && g.options.length > 0),
+    [drink, menu.modifierGroups],
+  );
+  const upsells = drink.upsellProductIds
+    .map(product)
+    .filter((p): p is Product => !!p && !p.hidden && p.available);
+
+  const hasSizes = drink.sizes.length > 0;
+  const [sizeId, setSizeId] = useState(drink.sizes[Math.min(1, drink.sizes.length - 1)]?.id ?? "");
+  const [choice, setChoice] = useState<Record<string, string[]>>(() =>
+    Object.fromEntries(
+      groups.map((g) => [g.id, g.required && g.type === "single" && g.options[0] ? [g.options[0].id] : []]),
+    ),
+  );
   const [qty, setQty] = useState(1);
-  const [pickedSweets, setPickedSweets] = useState<string[]>([]);
+  const [pickedUpsell, setPickedUpsell] = useState<string[]>([]);
 
-  const sizeExtra = isDrink ? sizes.find((s) => s.id === size)!.extra : 0;
-  const unitPrice = drink.price + sizeExtra;
-  const sweetsTotal = sweets
-    .filter((s) => pickedSweets.includes(s.id))
-    .reduce((a, s) => a + s.price, 0);
-  const total = unitPrice * qty + sweetsTotal;
+  const size = drink.sizes.find((s) => s.id === sizeId);
+  const unitPrice = hasSizes ? (size?.price ?? drink.price) : drink.price;
 
-  const toggleSweet = (id: string) =>
-    setPickedSweets((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const chosen: ChosenOption[] = groups.flatMap((g) =>
+    (choice[g.id] ?? [])
+      .map((oid) => g.options.find((o) => o.id === oid))
+      .filter((o): o is NonNullable<typeof o> => !!o)
+      .map((o) => ({ group: g.name, label: o.label, price: o.price })),
+  );
+  const optionsTotal = chosen.reduce((a, o) => a + o.price, 0);
+  const upsellTotal = upsells.filter((u) => pickedUpsell.includes(u.id)).reduce((a, u) => a + u.price, 0);
+  const total = (unitPrice + optionsTotal) * qty + upsellTotal;
+
+  const missingRequired = groups.some((g) => g.required && (choice[g.id]?.length ?? 0) === 0);
+
+  const toggle = (g: ModifierGroup, oid: string) =>
+    setChoice((prev) => {
+      const cur = prev[g.id] ?? [];
+      if (g.type === "single") return { ...prev, [g.id]: cur[0] === oid && !g.required ? [] : [oid] };
+      if (cur.includes(oid)) return { ...prev, [g.id]: cur.filter((x) => x !== oid) };
+      if (g.max > 0 && cur.length >= g.max) return prev;
+      return { ...prev, [g.id]: [...cur, oid] };
+    });
 
   const add = () => {
-    const stamp = Date.now();
+    const details = [
+      size?.label,
+      ...chosen.map((o) => (o.group === "Açúcar" ? `açúcar ${o.label.toLowerCase()}` : o.label)),
+    ]
+      .filter(Boolean)
+      .join(" · ");
     const items: OrderItem[] = [
-      ...Array.from({ length: qty }, (_, i) => ({
-        key: `${drink.id}-${stamp}-${i}`,
+      {
+        key: uid(),
+        productId: drink.id,
         name: drink.name,
         image: drink.image,
-        price: unitPrice,
-        details: isDrink ? `${size} · ${milk} · açúcar ${sugar.toLowerCase()}` : "Unidade",
-      })),
-      ...sweets
-        .filter((s) => pickedSweets.includes(s.id))
-        .map((s) => ({
-          key: `${s.id}-${stamp}`,
-          name: s.name,
-          image: s.image,
-          price: s.price,
+        unitPrice,
+        qty,
+        size: size?.label ?? null,
+        options: chosen,
+        details: details || "Unidade",
+      },
+      ...upsells
+        .filter((u) => pickedUpsell.includes(u.id))
+        .map((u) => ({
+          key: uid(),
+          productId: u.id,
+          name: u.name,
+          image: u.image,
+          unitPrice: u.price,
+          qty: 1,
+          size: null,
+          options: [],
           details: "Unidade",
         })),
     ];
@@ -93,54 +135,52 @@ export function DrinkSheet({ drink, onAdd }: Props) {
           {drink.name}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">{drink.description}</p>
-        <p className="mt-2 text-sm font-medium tracking-[0.18em]">{brl(unitPrice)}</p>
+        <p className="mt-2 text-sm font-medium tracking-[0.18em]">{brl(unitPrice + optionsTotal)}</p>
       </div>
 
-      {isDrink ? (
-        <div className="space-y-4">
+      {!drink.available && (
+        <p className="rounded-2xl bg-card px-4 py-3 text-center text-sm ring-1 ring-border">
+          Esgotado no momento
+        </p>
+      )}
+
+      <div className="space-y-4">
+        {hasSizes && (
           <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              Tamanho
-            </p>
-            <div className="flex gap-2">
-              {sizes.map((s) => (
-                <Chip key={s.id} active={size === s.id} onClick={() => setSize(s.id)}>
-                  {s.label}
-                  {s.extra > 0 && <span className="ml-1 opacity-60">+{s.extra}</span>}
-                </Chip>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              Leite
-            </p>
+            <Label>Tamanho</Label>
             <div className="flex flex-wrap gap-2">
-              {milks.map((m) => (
-                <Chip key={m} active={milk === m} onClick={() => setMilk(m)}>
-                  {m}
+              {drink.sizes.map((s) => (
+                <Chip key={s.id} active={sizeId === s.id} onClick={() => setSizeId(s.id)}>
+                  {s.label}
+                  <span className="ml-1.5 opacity-60">{brl(s.price)}</span>
                 </Chip>
               ))}
             </div>
           </div>
-          <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              Açúcar
-            </p>
-            <div className="flex gap-2">
-              {sugars.map((s) => (
-                <Chip key={s} active={sugar === s} onClick={() => setSugar(s)}>
-                  {s}
+        )}
+
+        {groups.map((g) => (
+          <div key={g.id}>
+            <Label>
+              {g.name}
+              {!g.required && <span className="ml-1 normal-case tracking-normal opacity-70">(opcional)</span>}
+              {g.type === "multiple" && g.max > 0 && (
+                <span className="ml-1 normal-case tracking-normal opacity-70">até {g.max}</span>
+              )}
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {g.options.map((o) => (
+                <Chip key={o.id} active={(choice[g.id] ?? []).includes(o.id)} onClick={() => toggle(g, o.id)}>
+                  {o.label}
+                  {o.price > 0 && <span className="ml-1 opacity-60">+{o.price}</span>}
                 </Chip>
               ))}
             </div>
           </div>
-        </div>
-      ) : (
+        ))}
+
         <div>
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            Quantidade
-          </p>
+          <Label>Quantidade</Label>
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -163,14 +203,14 @@ export function DrinkSheet({ drink, onAdd }: Props) {
             </button>
           </div>
         </div>
-      )}
+      </div>
 
-      {isDrink && (
+      {upsells.length > 0 && (
         <div className="rounded-2xl bg-card/70 p-4 ring-1 ring-border">
-          <p className="font-display text-base italic">Quer adicionar um docinho?</p>
+          <p className="font-display text-base italic">Quer adicionar algo mais?</p>
           <div className="mt-3 space-y-3">
-            {sweets.map((s) => {
-              const active = pickedSweets.includes(s.id);
+            {upsells.map((s) => {
+              const active = pickedUpsell.includes(s.id);
               return (
                 <div key={s.id} className="flex items-center gap-3">
                   <img
@@ -187,13 +227,13 @@ export function DrinkSheet({ drink, onAdd }: Props) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => toggleSweet(s.id)}
+                    onClick={() =>
+                      setPickedUpsell((p) => (p.includes(s.id) ? p.filter((x) => x !== s.id) : [...p, s.id]))
+                    }
                     aria-pressed={active}
                     aria-label={active ? `Remover ${s.name}` : `Adicionar ${s.name}`}
                     className={`grid size-9 shrink-0 place-items-center rounded-full text-lg leading-none transition-colors active:scale-95 ${
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "ring-1 ring-foreground text-foreground"
+                      active ? "bg-primary text-primary-foreground" : "ring-1 ring-foreground text-foreground"
                     }`}
                   >
                     {active ? "✓" : "+"}
@@ -208,7 +248,8 @@ export function DrinkSheet({ drink, onAdd }: Props) {
       <button
         type="button"
         onClick={add}
-        className="w-full rounded-full bg-primary py-4 text-sm font-medium tracking-wide text-primary-foreground transition-transform active:scale-[0.99]"
+        disabled={missingRequired || !drink.available}
+        className="w-full rounded-full bg-primary py-4 text-sm font-medium tracking-wide text-primary-foreground transition-transform active:scale-[0.99] disabled:opacity-40"
       >
         Adicionar ao pedido ({brl(total)})
       </button>

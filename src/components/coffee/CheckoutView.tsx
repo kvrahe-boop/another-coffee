@@ -1,12 +1,13 @@
 import { useState } from "react";
 import {
   brl,
+  itemTotal,
   orderTypes,
   payments,
   type OrderItem,
   type OrderType,
   type Payment,
-} from "@/lib/coffee-data";
+} from "@/lib/menu-types";
 
 type Props = {
   items: OrderItem[];
@@ -18,7 +19,7 @@ type Props = {
 export function CheckoutView({ items, orderType, onChangeOrderType, onConfirm }: Props) {
   const [name, setName] = useState("");
   const [payment, setPayment] = useState<Payment>("pix");
-  const total = items.reduce((a, i) => a + i.price, 0);
+  const total = items.reduce((a, i) => a + itemTotal(i), 0);
   const canConfirm = name.trim().length >= 2;
 
   return (
