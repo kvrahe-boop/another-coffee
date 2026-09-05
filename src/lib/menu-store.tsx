@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { get, set } from "idb-keyval";
 import { defaultMenu } from "./menu-defaults";
-import type { Category, MenuState, ModifierGroup, Product, Settings } from "./menu-types";
+import { uid, type Category, type MenuState, type ModifierGroup, type Product, type Settings } from "./menu-types";
 
 const KEY = "another-coffee-menu-v1";
 const CHANNEL = "another-coffee-menu";
@@ -37,15 +37,21 @@ function normalize(raw: Partial<MenuState> | undefined): MenuState {
     settings: { ...defaultMenu.settings, ...(raw.settings ?? {}) },
     categories: raw.categories ?? defaultMenu.categories,
     modifierGroups: raw.modifierGroups ?? defaultMenu.modifierGroups,
-    products: (raw.products ?? defaultMenu.products).map((p) => ({
-      sizes: [],
-      modifierGroupIds: [],
-      upsellProductIds: [],
-      available: true,
-      hidden: false,
-      cupStyle: "none" as const,
-      garnish: "",
-      ...p,
+    products: (raw.products ?? defaultMenu.products).map((p: Partial<Product>) => ({
+      id: p.id ?? uid(),
+      name: p.name ?? "",
+      description: p.description ?? "",
+      categoryId: p.categoryId ?? "quentes",
+      image: p.image ?? "",
+      price: p.price ?? 0,
+      sortOrder: p.sortOrder ?? 0,
+      sizes: p.sizes ?? [],
+      modifierGroupIds: p.modifierGroupIds ?? [],
+      upsellProductIds: p.upsellProductIds ?? [],
+      available: p.available ?? true,
+      hidden: p.hidden ?? false,
+      cupStyle: p.cupStyle ?? "none",
+      garnish: p.garnish ?? "",
     })),
   };
 }
