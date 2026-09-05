@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import type { Product } from "@/lib/coffee-data";
+import type { Product } from "@/lib/menu-types";
 
 type Props = {
   drinks: Product[];
@@ -88,6 +88,11 @@ export function CupCarousel({ drinks, index, onIndexChange, onSelect, compact, l
             }`}
             style={style}
           >
+            {!drink.available && offset === 0 && (
+              <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary px-4 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-primary-foreground">
+                Esgotado
+              </span>
+            )}
             <img
               src={drink.image}
               alt={drink.name}
@@ -97,7 +102,7 @@ export function CupCarousel({ drinks, index, onIndexChange, onSelect, compact, l
               draggable={false}
               className={`h-full w-auto max-w-[min(72vw,320px)] object-contain object-bottom drop-shadow-[0_40px_50px_rgba(60,40,15,0.28)] ${
                 offset === 0 && !compact ? "animate-float-cup" : ""
-              }`}
+              } ${drink.available ? "" : "opacity-40 grayscale"}`}
             />
           </button>
         );

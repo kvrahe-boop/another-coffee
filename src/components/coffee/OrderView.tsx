@@ -1,4 +1,4 @@
-import { brl, type OrderItem } from "@/lib/coffee-data";
+import { brl, itemTotal, type OrderItem } from "@/lib/menu-types";
 
 type Props = {
   items: OrderItem[];
@@ -8,7 +8,7 @@ type Props = {
 };
 
 export function OrderView({ items, onRemove, onCheckout, onContinue }: Props) {
-  const total = items.reduce((a, i) => a + i.price, 0);
+  const total = items.reduce((a, i) => a + itemTotal(i), 0);
 
   return (
     <div className="animate-sheet-up flex flex-1 flex-col px-6 pb-6">
@@ -39,10 +39,13 @@ export function OrderView({ items, onRemove, onCheckout, onContinue }: Props) {
                   className="size-12 shrink-0 object-contain"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{it.name}</p>
+                  <p className="truncate text-sm font-medium">
+                    {it.qty > 1 && <span className="mr-1 text-muted-foreground">{it.qty}×</span>}
+                    {it.name}
+                  </p>
                   <p className="truncate text-xs text-muted-foreground">{it.details}</p>
                 </div>
-                <p className="text-sm">{brl(it.price)}</p>
+                <p className="text-sm">{brl(itemTotal(it))}</p>
                 <button
                   type="button"
                   onClick={() => onRemove(it.key)}
