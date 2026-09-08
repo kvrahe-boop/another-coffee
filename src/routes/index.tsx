@@ -1,21 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { CupCarousel } from "@/components/coffee/CupCarousel";
 import { DrinkSheet } from "@/components/coffee/DrinkSheet";
 import { OrderView } from "@/components/coffee/OrderView";
 import { CheckoutView } from "@/components/coffee/CheckoutView";
-import {
-  categories,
-  orderTypes,
-  payments,
-  productsByCategory,
-  type CategoryId,
-  type OrderItem,
-  type OrderType,
-  type Payment,
-  type Product,
-} from "@/lib/coffee-data";
-import heroCup from "@/assets/caramel-macchiato.png";
+import { useMenu } from "@/lib/menu-store";
+import { useOrders } from "@/lib/orders-store";
+import { printOrder, printerConnected } from "@/lib/printer";
+import { orderTypes, payments, type OrderItem, type OrderType, type Payment, type Product } from "@/lib/menu-types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -41,9 +33,13 @@ export const Route = createFileRoute("/")({
 type Step = "start" | "type" | "menu" | "order" | "checkout" | "done";
 
 function Kiosk() {
+  const { menu, visibleCategories, visibleProducts, product } = useMenu();
+  const { createOrder } = useOrders();
+  const settings = menu.settings;
+
   const [step, setStep] = useState<Step>("start");
   const [orderType, setOrderType] = useState<OrderType>("local");
-  const [category, setCategory] = useState<CategoryId>("quentes");
+  const [category, setCategory] = useState<string | null>(null);
   const [indexByCat, setIndexByCat] = useState<Record<string, number>>({});
   const [selected, setSelected] = useState<Product | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -51,15 +47,19 @@ function Kiosk() {
     null,
   );
 
-  const list = productsByCategory(category);
-  const index = Math.min(indexByCat[category] ?? 0, list.length - 1);
-  const setIndex = (i: number) => setIndexByCat((p) => ({ ...p, [category]: i }));
+  const cats = visibleCategories;
+  const activeCat = category && cats.some((c) => c.id === category) ? category : (cats[0]?.id ?? "");
+  const list = activeCat ? visibleProducts(activeCat) : [];
+  const index = Math.max(0, Math.min(indexByCat[activeCat] ?? 0, list.length - 1));
+  const setIndex = (i: number) => setIndexByCat((p) => ({ ...p, [activeCat]: i }));
+
+  const hero = (settings.heroProductId && product(settings.heroProductId)) || list[0] || menu.products[0];
 
   const reset = () => {
     setItems([]);
     setSelected(null);
     setReceipt(null);
-    setCategory("quentes");
+    setCategory(null);
     setIndexByCat({});
     setStep("start");
   };
@@ -76,31 +76,42 @@ function Kiosk() {
   if (step === "start") {
     return (
       <Shell>
-        <button
-          type="button"
-          onClick={() => setStep("type")}
-          className="flex min-h-screen w-full flex-col items-center justify-between px-6 pb-10 pt-12 text-center"
-        >
-          <span className="font-display text-[15px] uppercase tracking-[0.28em] text-foreground/80">
-            ANOTHER COFFEE
-          </span>
-          <img
-            src={heroCup}
-            alt="Caramelo Macchiato"
-            width={1024}
-            height={1536}
-            className="animate-float-cup h-[52vh] w-auto object-contain drop-shadow-[0_40px_50px_rgba(60,40,15,0.28)]"
-          />
-          <div className="flex flex-col items-center gap-3">
-            <h1 className="font-display text-[2.6rem] leading-[0.95] tracking-tight text-balance">
-              Faça seu pedido aqui
-            </h1>
-            <p className="text-sm text-muted-foreground">Sem fila, direto para a cozinha</p>
-            <span className="mt-4 animate-pulse rounded-full bg-primary px-8 py-4 text-sm font-medium tracking-wide text-primary-foreground">
-              Toque para começar
+        <div className="relative flex min-h-screen w-full flex-col">
+          <Link
+            to="/admin"
+            aria-label="Painel do lojista"
+            className="absolute right-3 top-3 z-10 grid size-11 place-items-center rounded-full text-muted-foreground/40"
+          >
+            <span className="size-2 rounded-full bg-current" />
+          </Link>
+          <button
+            type="button"
+            onClick={() => setStep("type")}
+            className="flex min-h-screen w-full flex-col items-center justify-between px-6 pb-10 pt-12 text-center"
+          >
+            <span className="font-display text-[15px] uppercase tracking-[0.28em] text-foreground/80">
+              {settings.storeName}
             </span>
-          </div>
-        </button>
+            {hero && (
+              <img
+                src={hero.image}
+                alt={hero.name}
+                width={1024}
+                height={1536}
+                className="animate-float-cup h-[52vh] w-auto object-contain drop-shadow-[0_40px_50px_rgba(60,40,15,0.28)]"
+              />
+            )}
+            <div className="flex flex-col items-center gap-3">
+              <h1 className="font-display text-[2.6rem] leading-[0.95] tracking-tight text-balance">
+                {settings.welcomeTitle}
+              </h1>
+              <p className="text-sm text-muted-foreground">{settings.welcomeSubtitle}</p>
+              <span className="mt-4 animate-pulse rounded-full bg-primary px-8 py-4 text-sm font-medium tracking-wide text-primary-foreground">
+                Toque para começar
+              </span>
+            </div>
+          </button>
+        </div>
       </Shell>
     );
   }
@@ -157,7 +168,7 @@ function Kiosk() {
           </svg>
         </button>
         <span className="font-display text-[15px] uppercase tracking-[0.28em] text-foreground/80">
-          ANOTHER COFFEE
+          {settings.storeName}
         </span>
         <button
           type="button"
@@ -234,7 +245,11 @@ function Kiosk() {
             orderType={orderType}
             onChangeOrderType={setOrderType}
             onConfirm={({ name, payment }) => {
-              setReceipt({ number: Math.floor(Math.random() * 900) + 100, name, payment });
+              const order = createOrder({ customerName: name, orderType, payment, items });
+              if (settings.autoPrint && printerConnected()) {
+                void printOrder(order, settings.storeName).catch(() => undefined);
+              }
+              setReceipt({ number: order.number, name, payment });
               setStep("done");
             }}
           />
@@ -246,10 +261,10 @@ function Kiosk() {
         <>
           <div className={`shrink-0 ${selected ? "pt-2" : "pt-4"}`}>
             <CupCarousel
-              key={category}
+              key={activeCat}
               drinks={list}
               index={index}
-              label={categories.find((c) => c.id === category)?.label}
+              label={cats.find((c) => c.id === activeCat)?.label}
               onIndexChange={(i) => {
                 setIndex(i);
                 setSelected(null);
@@ -298,8 +313,8 @@ function Kiosk() {
             className="sticky bottom-0 shrink-0 border-t border-border bg-background/85 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur"
           >
             <ul className="flex justify-between gap-1">
-              {categories.map((c) => {
-                const active = c.id === category;
+              {cats.map((c) => {
+                const active = c.id === activeCat;
                 return (
                   <li key={c.id} className="flex-1">
                     <button
