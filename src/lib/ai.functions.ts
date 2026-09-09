@@ -7,6 +7,8 @@ const input = z.object({
   cupStyle: z.enum(["kraft", "flat", "dome", "none"]),
   garnish: z.string().max(120).default(""),
   categoryKind: z.enum(["drink", "food", "water"]).default("drink"),
+  /** Texto da marca impresso no copo (ex.: ANOTHER COFFEE). Vazio = sem logo. */
+  logoText: z.string().max(40).default(""),
 });
 
 const CUP_PROMPTS = {
