@@ -38,16 +38,28 @@ export async function hasTransparency(src: string) {
  * Remove o fundo liso (branco/bege) por preenchimento a partir das bordas,
  * depois recorta as margens transparentes. Retorna PNG data URL.
  */
-export async function removeBackground(src: string, tolerance = 34) {
+export async function removeBackground(src: string, tolerance = 26) {
   const c = toCanvas(await loadImage(src));
   const ctx = c.getContext("2d")!;
   const { width: w, height: h } = c;
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;
 
-  // Cor de fundo = média dos 4 cantos.
-  const corners = [0, (w - 1) * 4, (h - 1) * w * 4, ((h - 1) * w + w - 1) * 4];
-  const bg = [0, 1, 2].map((ch) => corners.reduce((a, i) => a + d[i + ch]!, 0) / 4);
+  // Cor de fundo = mediana das bordas (mais estável que os 4 cantos).
+  const edge: number[][] = [[], [], []];
+  const sample = (x: number, y: number) => {
+    const i = (y * w + x) * 4;
+    for (let ch = 0; ch < 3; ch++) edge[ch]!.push(d[i + ch]!);
+  };
+  for (let x = 0; x < w; x += 2) {
+    sample(x, 0);
+    sample(x, h - 1);
+  }
+  for (let y = 0; y < h; y += 2) {
+    sample(0, y);
+    sample(w - 1, y);
+  }
+  const bg = edge.map((v) => v.sort((a, b) => a - b)[Math.floor(v.length / 2)]!);
   const dist = (i: number) =>
     Math.max(Math.abs(d[i]! - bg[0]!), Math.abs(d[i + 1]! - bg[1]!), Math.abs(d[i + 2]! - bg[2]!));
 
