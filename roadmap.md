@@ -12,14 +12,14 @@
 ## Rodada atual (sem nuvem — salvo no dispositivo)
 - [x] Padrão de copos Another Coffee: kraft (quentes), tampa reta (geladas), cúpula (geladas com enfeite)
 - [x] Modelo de dados editável + armazenamento local (menu + pedidos)
-- [ ] Painel /admin com PIN: produtos, complementos (grupos), categorias, configurações
-- [ ] Foto: upload PNG sem fundo + gerar com IA no padrão do copo + remover fundo
-- [ ] Complementos por produto (sem leite → não aparece), preço por tamanho, ordem, esgotado/ocultar
-- [ ] Totem lê o cardápio editado; DrinkSheet dinâmico
-- [ ] Pedidos salvos + painel /expedicao (Novos → Preparando → Prontos → Entregues)
-- [ ] Impressora térmica Bluetooth (ESC/POS) — imprimir comanda
-- [ ] Instalar no tablet Android (manifest / tela inicial) + instruções
-- [ ] Exportar/importar cardápio (backup)
+- [x] Painel /admin com PIN: produtos, complementos (grupos), categorias, configurações
+- [x] Foto: upload PNG sem fundo + gerar com IA no padrão do copo + remover fundo
+- [x] Complementos por produto (sem leite → não aparece), preço por tamanho, ordem, esgotado/ocultar
+- [x] Totem lê o cardápio editado; DrinkSheet dinâmico
+- [x] Pedidos salvos + painel /expedicao (Novos → Preparando → Prontos → Entregues)
+- [x] Impressora térmica Bluetooth (ESC/POS) — imprimir comanda
+- [x] Instalar no tablet Android (manifest / tela inicial)
+- [x] Exportar/importar cardápio (backup)
 
 ## Depois (quando Lovable Cloud ativar)
 - [ ] Migrar cardápio, fotos e pedidos para a nuvem
