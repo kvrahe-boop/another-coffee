@@ -26,18 +26,23 @@ export const generateProductImage = createServerFn({ method: "POST" })
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("Geração por IA não configurada");
 
+    const logo = data.logoText.trim();
+    const branding = logo
+      ? ` The cup is printed with the brand wordmark "${logo}" in clean minimal black sans-serif capital letters, centered on the front of the cup, spelled exactly like that, no other text or symbols.`
+      : " No logo, no text on the cup.";
+
     const subject =
       data.cupStyle === "none"
         ? `${data.name}${data.description ? ` — ${data.description}` : ""}, a single serving of the real product`
-        : `${CUP_PROMPTS[data.cupStyle]}${data.cupStyle === "dome" ? ` ${data.garnish || "whipped cream"}` : ""}, containing ${data.name}${data.description ? ` (${data.description})` : ""}. No logo, no text on the cup.`;
+        : `${CUP_PROMPTS[data.cupStyle]}${data.cupStyle === "dome" ? ` ${data.garnish || "whipped cream"}` : ""}, containing ${data.name}${data.description ? ` (${data.description})` : ""}.${branding}`;
 
-    const prompt = `Photorealistic studio product shot of ${subject}. Centered, front view, slightly below eye level, entire product fully visible with margin around it, soft diffused daylight, subtle natural shadow only directly under the product, isolated on a pure solid white background (#FFFFFF), no props, no table, no text, no watermark. Vertical 2:3 composition.`;
+    const prompt = `Photorealistic studio product shot of ${subject}. Centered, front view, slightly below eye level, entire product fully visible with generous margin around it, soft diffused daylight, no cast shadow on the background, isolated on a pure flat solid white background (#FFFFFF) with completely even lighting and no gradient or vignette, crisp clean edges, no props, no table, no watermark. Vertical 2:3 composition.`;
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        model: "google/gemini-3-pro-image",
         messages: [{ role: "user", content: prompt }],
         modalities: ["image", "text"],
       }),
