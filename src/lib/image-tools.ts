@@ -80,23 +80,35 @@ export async function removeBackground(src: string, tolerance = 26) {
     push(0, y);
     push(w - 1, y);
   }
-  const soft = tolerance * 2;
+  const soft = tolerance * 3;
   while (stack.length) {
     const p = stack.pop()!;
     const i = p * 4;
     const dd = dist(i);
     if (dd > soft) continue;
+    const x = p % w;
+    const y = (p - x) / w;
     if (dd <= tolerance) {
       d[i + 3] = 0;
-      const x = p % w;
-      const y = (p - x) / w;
-      if (x > 0) push(x - 1, y);
-      if (x < w - 1) push(x + 1, y);
-      if (y > 0) push(x, y - 1);
-      if (y < h - 1) push(x, y + 1);
     } else {
       // Borda suave: alpha proporcional à distância da cor de fundo.
       d[i + 3] = Math.round(((dd - tolerance) / (soft - tolerance)) * 255);
+    }
+    // Continua espalhando pela borda suave para não deixar auréola.
+    if (x > 0) push(x - 1, y);
+    if (x < w - 1) push(x + 1, y);
+    if (y > 0) push(x, y - 1);
+    if (y < h - 1) push(x, y + 1);
+  }
+
+  // Tira a auréola clara das bordas: descontamina a cor de fundo dos pixels semitransparentes.
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3]!;
+    if (a === 0 || a === 255) continue;
+    const f = a / 255;
+    for (let ch = 0; ch < 3; ch++) {
+      const v = (d[i + ch]! - bg[ch]! * (1 - f)) / f;
+      d[i + ch] = Math.max(0, Math.min(255, Math.round(v)));
     }
   }
   ctx.putImageData(img, 0, 0);
