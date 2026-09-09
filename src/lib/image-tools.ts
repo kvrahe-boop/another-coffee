@@ -38,16 +38,28 @@ export async function hasTransparency(src: string) {
  * Remove o fundo liso (branco/bege) por preenchimento a partir das bordas,
  * depois recorta as margens transparentes. Retorna PNG data URL.
  */
-export async function removeBackground(src: string, tolerance = 34) {
+export async function removeBackground(src: string, tolerance = 26) {
   const c = toCanvas(await loadImage(src));
   const ctx = c.getContext("2d")!;
   const { width: w, height: h } = c;
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;
 
-  // Cor de fundo = média dos 4 cantos.
-  const corners = [0, (w - 1) * 4, (h - 1) * w * 4, ((h - 1) * w + w - 1) * 4];
-  const bg = [0, 1, 2].map((ch) => corners.reduce((a, i) => a + d[i + ch]!, 0) / 4);
+  // Cor de fundo = mediana das bordas (mais estável que os 4 cantos).
+  const edge: number[][] = [[], [], []];
+  const sample = (x: number, y: number) => {
+    const i = (y * w + x) * 4;
+    for (let ch = 0; ch < 3; ch++) edge[ch]!.push(d[i + ch]!);
+  };
+  for (let x = 0; x < w; x += 2) {
+    sample(x, 0);
+    sample(x, h - 1);
+  }
+  for (let y = 0; y < h; y += 2) {
+    sample(0, y);
+    sample(w - 1, y);
+  }
+  const bg = edge.map((v) => v.sort((a, b) => a - b)[Math.floor(v.length / 2)]!);
   const dist = (i: number) =>
     Math.max(Math.abs(d[i]! - bg[0]!), Math.abs(d[i + 1]! - bg[1]!), Math.abs(d[i + 2]! - bg[2]!));
 
@@ -68,23 +80,35 @@ export async function removeBackground(src: string, tolerance = 34) {
     push(0, y);
     push(w - 1, y);
   }
-  const soft = tolerance * 2;
+  const soft = tolerance * 3;
   while (stack.length) {
     const p = stack.pop()!;
     const i = p * 4;
     const dd = dist(i);
     if (dd > soft) continue;
+    const x = p % w;
+    const y = (p - x) / w;
     if (dd <= tolerance) {
       d[i + 3] = 0;
-      const x = p % w;
-      const y = (p - x) / w;
-      if (x > 0) push(x - 1, y);
-      if (x < w - 1) push(x + 1, y);
-      if (y > 0) push(x, y - 1);
-      if (y < h - 1) push(x, y + 1);
     } else {
       // Borda suave: alpha proporcional à distância da cor de fundo.
       d[i + 3] = Math.round(((dd - tolerance) / (soft - tolerance)) * 255);
+    }
+    // Continua espalhando pela borda suave para não deixar auréola.
+    if (x > 0) push(x - 1, y);
+    if (x < w - 1) push(x + 1, y);
+    if (y > 0) push(x, y - 1);
+    if (y < h - 1) push(x, y + 1);
+  }
+
+  // Tira a auréola clara das bordas: descontamina a cor de fundo dos pixels semitransparentes.
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3]!;
+    if (a === 0 || a === 255) continue;
+    const f = a / 255;
+    for (let ch = 0; ch < 3; ch++) {
+      const v = (d[i + ch]! - bg[ch]! * (1 - f)) / f;
+      d[i + ch] = Math.max(0, Math.min(255, Math.round(v)));
     }
   }
   ctx.putImageData(img, 0, 0);
