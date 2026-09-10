@@ -294,6 +294,8 @@ function ProductForm({
           cupStyle: p.cupStyle,
           garnish: p.garnish,
           categoryKind: kind,
+          logoText: p.cupStyle === "none" ? "" : menu.settings.logoText,
+          extraPrompt: [menu.settings.imagePromptExtra, p.imagePrompt].filter(Boolean).join(" "),
         },
       });
       await applyImage(res.image);
@@ -302,6 +304,26 @@ function ProductForm({
     }
     setBusy("");
   };
+
+  /** Combo: junta as fotos dos produtos incluídos numa só imagem. */
+  const onCompose = async () => {
+    setErr("");
+    setBusy("Montando a foto do combo…");
+    try {
+      const srcs = p.comboProductIds
+        .map((id) => menu.products.find((x) => x.id === id)?.image)
+        .filter((s): s is string => !!s);
+      set("image", await composeCombo(srcs));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Falha ao montar a foto");
+    }
+    setBusy("");
+  };
+
+  const comboSum = p.comboProductIds.reduce(
+    (t, id) => t + (menu.products.find((x) => x.id === id)?.price ?? 0),
+    0,
+  );
 
   const toggleIn = (list: string[], id: string) =>
     list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
