@@ -384,6 +384,16 @@ function ProductForm({
                 Tirar fundo
               </button>
             )}
+            {p.comboProductIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void onCompose()}
+                disabled={!!busy}
+                className="rounded-full px-3 py-2 text-xs ring-1 ring-border disabled:opacity-40"
+              >
+                Montar foto do combo
+              </button>
+            )}
             <input
               ref={fileRef}
               type="file"
@@ -397,9 +407,39 @@ function ProductForm({
             />
           </div>
         </div>
+        <Field label="Detalhes extras para a IA (opcional)">
+          <input
+            className={`${inputCls} mt-3`}
+            placeholder="ex.: copo sobre fundo branco, vapor leve, grãos ao lado"
+            value={p.imagePrompt}
+            onChange={(e) => set("imagePrompt", e.target.value)}
+          />
+        </Field>
         {busy && <p className="mt-3 text-xs text-muted-foreground">{busy}</p>}
         {err && <p className="mt-3 text-xs text-destructive">{err}</p>}
       </div>
+
+      {/* combo */}
+      <Field label="Combo: produtos incluídos">
+        <div className="flex flex-wrap gap-2">
+          {menu.products
+            .filter((x) => x.id !== p.id && x.comboProductIds.length === 0)
+            .map((x) => (
+              <Toggle
+                key={x.id}
+                on={p.comboProductIds.includes(x.id)}
+                onChange={() => set("comboProductIds", toggleIn(p.comboProductIds, x.id))}
+              >
+                {x.name}
+              </Toggle>
+            ))}
+        </div>
+        <span className="mt-1 block text-xs text-muted-foreground">
+          {p.comboProductIds.length
+            ? `Somados avulsos: ${brl(comboSum)} — defina abaixo o preço promocional. A primeira foto fica atrás e maior; as outras vêm na frente, menores.`
+            : "Deixe vazio para um produto normal."}
+        </span>
+      </Field>
 
       <Field label="Nome">
         <input className={inputCls} value={p.name} onChange={(e) => set("name", e.target.value)} />
