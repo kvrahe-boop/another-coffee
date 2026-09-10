@@ -48,10 +48,12 @@ function normalize(raw: Partial<MenuState> | undefined): MenuState {
       sizes: p.sizes ?? [],
       modifierGroupIds: p.modifierGroupIds ?? [],
       upsellProductIds: p.upsellProductIds ?? [],
+      comboProductIds: p.comboProductIds ?? [],
       available: p.available ?? true,
       hidden: p.hidden ?? false,
       cupStyle: p.cupStyle ?? "none",
       garnish: p.garnish ?? "",
+      imagePrompt: p.imagePrompt ?? "",
     })),
   };
 }
