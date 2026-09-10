@@ -3,7 +3,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
 import { useMenu } from "@/lib/menu-store";
 import { generateProductImage } from "@/lib/ai.functions";
-import { fileToDataUrl, hasTransparency, removeBackground, trimAndShrink } from "@/lib/image-tools";
+import {
+  composeCombo,
+  fileToDataUrl,
+  hasTransparency,
+  removeBackground,
+  trimAndShrink,
+} from "@/lib/image-tools";
 import { bluetoothSupported, connectPrinter, printerConnected } from "@/lib/printer";
 import {
   brl,
