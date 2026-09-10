@@ -858,6 +858,24 @@ function SettingsTab() {
           ))}
         </select>
       </Field>
+      <Field label="Marca impressa no copo (fotos geradas por IA)">
+        <input
+          className={inputCls}
+          value={s.logoText}
+          onChange={(e) => saveSettings({ logoText: e.target.value })}
+        />
+        <span className="mt-1 block text-xs text-muted-foreground">
+          Sempre sai igual: o nome em letras pretas e um grão de café logo abaixo.
+        </span>
+      </Field>
+      <Field label="Texto extra para todas as fotos geradas">
+        <textarea
+          className={`${inputCls} min-h-20`}
+          placeholder="ex.: luz suave, fundo branco, mesmo enquadramento das outras fotos"
+          value={s.imagePromptExtra}
+          onChange={(e) => saveSettings({ imagePromptExtra: e.target.value })}
+        />
+      </Field>
       <Field label="Código de acesso do painel">
         <input className={inputCls} value={s.pin} onChange={(e) => saveSettings({ pin: e.target.value })} />
       </Field>

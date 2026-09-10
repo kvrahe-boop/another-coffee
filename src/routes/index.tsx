@@ -259,7 +259,20 @@ function Kiosk() {
       {/* ── Cardápio ── */}
       {step === "menu" && (
         <>
-          <div className={`shrink-0 ${selected ? "pt-2" : "pt-4"}`}>
+          {!selected && list[index] && (
+            <div className="shrink-0 px-6 pt-3 text-center">
+              <h1 className="font-display text-[2rem] leading-none tracking-tight text-balance">
+                {list[index].name}
+              </h1>
+              <p className="mt-1.5 font-display text-xl tracking-tight text-muted-foreground">
+                {list[index].sizes.length
+                  ? `a partir de ${brl(Math.min(...list[index].sizes.map((s) => s.price)))}`
+                  : brl(list[index].price)}
+              </p>
+            </div>
+          )}
+
+          <div className={`shrink-0 ${selected ? "pt-2" : "pt-2"}`}>
             <CupCarousel
               key={activeCat}
               drinks={list}
@@ -288,12 +301,9 @@ function Kiosk() {
             </div>
           ) : (
             <div className="flex flex-1 flex-col items-center justify-end gap-3 pb-3">
-              <div className="text-center">
-                <p className="font-display text-2xl leading-none tracking-tight">{list[index]?.name}</p>
-                <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Deslize · toque para escolher
-                </p>
-              </div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                Deslize · toque para escolher
+              </p>
               <div className="flex gap-1.5" aria-hidden="true">
                 {list.map((d, k) => (
                   <span
