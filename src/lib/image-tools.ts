@@ -121,6 +121,33 @@ export async function trimAndShrink(src: string, maxH = 1400) {
   return trimCanvas(c).toDataURL("image/png");
 }
 
+/**
+ * Monta a foto de um combo: o primeiro produto fica atrás e maior,
+ * os seguintes vêm na frente, menores e deslocados para o lado.
+ */
+export async function composeCombo(sources: string[], height = 1200) {
+  const imgs = await Promise.all(sources.slice(0, 3).map(loadImage));
+  if (!imgs.length) throw new Error("Escolha ao menos um produto para o combo");
+  const c = document.createElement("canvas");
+  c.width = Math.round(height * 0.9);
+  c.height = height;
+  const ctx = c.getContext("2d")!;
+  const scales = [1, 0.62, 0.5];
+  const anchors = [
+    { x: 0.44, y: 1 },
+    { x: 0.74, y: 1 },
+    { x: 0.2, y: 1 },
+  ];
+  imgs.forEach((img, i) => {
+    const s = scales[i] ?? 0.5;
+    const a = anchors[i] ?? anchors[2]!;
+    const h = height * s * 0.94;
+    const w = (img.naturalWidth / img.naturalHeight) * h;
+    ctx.drawImage(img, c.width * a.x - w / 2, c.height * a.y - h, w, h);
+  });
+  return trimCanvas(c).toDataURL("image/png");
+}
+
 function trimCanvas(c: HTMLCanvasElement) {
   const ctx = c.getContext("2d")!;
   const { width: w, height: h } = c;
