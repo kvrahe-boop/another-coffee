@@ -50,12 +50,16 @@ export type Product = {
   modifierGroupIds: string[];
   /** Produtos sugeridos ("Quer adicionar um docinho?"). */
   upsellProductIds: string[];
+  /** Combo: produtos do cardápio incluídos neste item. Vazio = produto normal. */
+  comboProductIds: string[];
   available: boolean;
   hidden: boolean;
   sortOrder: number;
   cupStyle: CupStyle;
   /** Descrição do enfeite/cobertura para a IA (ex.: "chantilly e calda de chocolate"). */
   garnish: string;
+  /** Texto extra enviado à IA só para este produto. */
+  imagePrompt: string;
 };
 
 export type Settings = {
@@ -66,6 +70,10 @@ export type Settings = {
   heroProductId: string | null;
   /** Imprime automaticamente ao confirmar o pedido no totem. */
   autoPrint: boolean;
+  /** Marca impressa no copo pela IA. */
+  logoText: string;
+  /** Texto fixo somado ao comando de geração de todas as fotos. */
+  imagePromptExtra: string;
 };
 
 export type MenuState = {

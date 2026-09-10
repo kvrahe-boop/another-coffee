@@ -20,14 +20,15 @@ const sizesPMG = (p: number, m: number, g: number) => [
   { id: "G", label: "G", price: g },
 ];
 
-const product = (
-  p: Omit<Product, "available" | "hidden" | "upsellProductIds" | "garnish"> &
-    Partial<Pick<Product, "available" | "hidden" | "upsellProductIds" | "garnish">>,
-): Product => ({
+type Optional = "available" | "hidden" | "upsellProductIds" | "garnish" | "comboProductIds" | "imagePrompt";
+
+const product = (p: Omit<Product, Optional> & Partial<Pick<Product, Optional>>): Product => ({
   available: true,
   hidden: false,
   upsellProductIds: [],
+  comboProductIds: [],
   garnish: "",
+  imagePrompt: "",
   ...p,
 });
 
@@ -42,8 +43,11 @@ export const defaultMenu: MenuState = {
     welcomeSubtitle: "Sem fila, direto para a cozinha",
     heroProductId: "caramel-macchiato",
     autoPrint: false,
+    logoText: "ANOTHER COFFEE",
+    imagePromptExtra: "",
   },
   categories: [
+    { id: "combos", label: "Combos", kind: "food", sortOrder: -1, hidden: false },
     { id: "quentes", label: "Quentes", kind: "drink", sortOrder: 0, hidden: false },
     { id: "geladas", label: "Geladas", kind: "drink", sortOrder: 1, hidden: false },
     { id: "doces", label: "Doces", kind: "food", sortOrder: 2, hidden: false },

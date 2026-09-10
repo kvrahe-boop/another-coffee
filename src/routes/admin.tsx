@@ -3,7 +3,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
 import { useMenu } from "@/lib/menu-store";
 import { generateProductImage } from "@/lib/ai.functions";
-import { fileToDataUrl, hasTransparency, removeBackground, trimAndShrink } from "@/lib/image-tools";
+import {
+  composeCombo,
+  fileToDataUrl,
+  hasTransparency,
+  removeBackground,
+  trimAndShrink,
+} from "@/lib/image-tools";
 import { bluetoothSupported, connectPrinter, printerConnected } from "@/lib/printer";
 import {
   brl,
@@ -167,11 +173,13 @@ function Products() {
     sizes: [],
     modifierGroupIds: [],
     upsellProductIds: [],
+    comboProductIds: [],
     available: true,
     hidden: false,
     sortOrder: menu.products.length,
     cupStyle: "kraft",
     garnish: "",
+    imagePrompt: "",
   });
 
   if (editing)
@@ -292,6 +300,8 @@ function ProductForm({
           cupStyle: p.cupStyle,
           garnish: p.garnish,
           categoryKind: kind,
+          logoText: p.cupStyle === "none" ? "" : menu.settings.logoText,
+          extraPrompt: [menu.settings.imagePromptExtra, p.imagePrompt].filter(Boolean).join(" "),
         },
       });
       await applyImage(res.image);
@@ -300,6 +310,26 @@ function ProductForm({
     }
     setBusy("");
   };
+
+  /** Combo: junta as fotos dos produtos incluídos numa só imagem. */
+  const onCompose = async () => {
+    setErr("");
+    setBusy("Montando a foto do combo…");
+    try {
+      const srcs = p.comboProductIds
+        .map((id) => menu.products.find((x) => x.id === id)?.image)
+        .filter((s): s is string => !!s);
+      set("image", await composeCombo(srcs));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Falha ao montar a foto");
+    }
+    setBusy("");
+  };
+
+  const comboSum = p.comboProductIds.reduce(
+    (t, id) => t + (menu.products.find((x) => x.id === id)?.price ?? 0),
+    0,
+  );
 
   const toggleIn = (list: string[], id: string) =>
     list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
@@ -354,6 +384,16 @@ function ProductForm({
                 Tirar fundo
               </button>
             )}
+            {p.comboProductIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void onCompose()}
+                disabled={!!busy}
+                className="rounded-full px-3 py-2 text-xs ring-1 ring-border disabled:opacity-40"
+              >
+                Montar foto do combo
+              </button>
+            )}
             <input
               ref={fileRef}
               type="file"
@@ -367,9 +407,39 @@ function ProductForm({
             />
           </div>
         </div>
+        <Field label="Detalhes extras para a IA (opcional)">
+          <input
+            className={`${inputCls} mt-3`}
+            placeholder="ex.: copo sobre fundo branco, vapor leve, grãos ao lado"
+            value={p.imagePrompt}
+            onChange={(e) => set("imagePrompt", e.target.value)}
+          />
+        </Field>
         {busy && <p className="mt-3 text-xs text-muted-foreground">{busy}</p>}
         {err && <p className="mt-3 text-xs text-destructive">{err}</p>}
       </div>
+
+      {/* combo */}
+      <Field label="Combo: produtos incluídos">
+        <div className="flex flex-wrap gap-2">
+          {menu.products
+            .filter((x) => x.id !== p.id && x.comboProductIds.length === 0)
+            .map((x) => (
+              <Toggle
+                key={x.id}
+                on={p.comboProductIds.includes(x.id)}
+                onChange={() => set("comboProductIds", toggleIn(p.comboProductIds, x.id))}
+              >
+                {x.name}
+              </Toggle>
+            ))}
+        </div>
+        <span className="mt-1 block text-xs text-muted-foreground">
+          {p.comboProductIds.length
+            ? `Somados avulsos: ${brl(comboSum)} — defina abaixo o preço promocional. A primeira foto fica atrás e maior; as outras vêm na frente, menores.`
+            : "Deixe vazio para um produto normal."}
+        </span>
+      </Field>
 
       <Field label="Nome">
         <input className={inputCls} value={p.name} onChange={(e) => set("name", e.target.value)} />
@@ -787,6 +857,24 @@ function SettingsTab() {
             </option>
           ))}
         </select>
+      </Field>
+      <Field label="Marca impressa no copo (fotos geradas por IA)">
+        <input
+          className={inputCls}
+          value={s.logoText}
+          onChange={(e) => saveSettings({ logoText: e.target.value })}
+        />
+        <span className="mt-1 block text-xs text-muted-foreground">
+          Sempre sai igual: o nome em letras pretas e um grão de café logo abaixo.
+        </span>
+      </Field>
+      <Field label="Texto extra para todas as fotos geradas">
+        <textarea
+          className={`${inputCls} min-h-20`}
+          placeholder="ex.: luz suave, fundo branco, mesmo enquadramento das outras fotos"
+          value={s.imagePromptExtra}
+          onChange={(e) => saveSettings({ imagePromptExtra: e.target.value })}
+        />
       </Field>
       <Field label="Código de acesso do painel">
         <input className={inputCls} value={s.pin} onChange={(e) => saveSettings({ pin: e.target.value })} />

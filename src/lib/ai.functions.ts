@@ -7,8 +7,10 @@ const input = z.object({
   cupStyle: z.enum(["kraft", "flat", "dome", "none"]),
   garnish: z.string().max(120).default(""),
   categoryKind: z.enum(["drink", "food", "water"]).default("drink"),
-  /** Texto da marca impresso no copo (ex.: ANOTHER COFFEE). Vazio = sem logo. */
-  logoText: z.string().max(40).default(""),
+  /** Texto da marca impresso no copo. Vazio = sem logo. */
+  logoText: z.string().max(40).default("ANOTHER COFFEE"),
+  /** Texto livre somado ao comando de geração. */
+  extraPrompt: z.string().max(400).default(""),
 });
 
 const CUP_PROMPTS = {
@@ -27,8 +29,9 @@ export const generateProductImage = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("Geração por IA não configurada");
 
     const logo = data.logoText.trim();
+    // Marca sempre idêntica: wordmark em duas linhas com um grão de café simples abaixo.
     const branding = logo
-      ? ` The cup is printed with the brand wordmark "${logo}" in clean minimal black sans-serif capital letters, centered on the front of the cup, spelled exactly like that, no other text or symbols.`
+      ? ` The cup carries the exact same brand mark every time: the wordmark "${logo}" in clean minimal black sans-serif capital letters with wide letter-spacing, centered on the front of the cup, and directly below it one small solid black minimal coffee-bean icon (an oval with a single centre line). Spelled exactly like that, same size and placement always, no other text, no symbols, no extra logos.`
       : " No logo, no text on the cup.";
 
     const subject =
@@ -36,7 +39,8 @@ export const generateProductImage = createServerFn({ method: "POST" })
         ? `${data.name}${data.description ? ` — ${data.description}` : ""}, a single serving of the real product`
         : `${CUP_PROMPTS[data.cupStyle]}${data.cupStyle === "dome" ? ` ${data.garnish || "whipped cream"}` : ""}, containing ${data.name}${data.description ? ` (${data.description})` : ""}.${branding}`;
 
-    const prompt = `Photorealistic studio product shot of ${subject}. Centered, front view, slightly below eye level, entire product fully visible with generous margin around it, soft diffused daylight, no cast shadow on the background, isolated on a pure flat solid white background (#FFFFFF) with completely even lighting and no gradient or vignette, crisp clean edges, no props, no table, no watermark. Vertical 2:3 composition.`;
+    const extra = data.extraPrompt.trim();
+    const prompt = `Photorealistic studio product shot of ${subject}. Centered, front view, slightly below eye level, entire product fully visible with generous margin around it, soft diffused daylight, no cast shadow on the background, isolated on a pure flat solid white background (#FFFFFF) with completely even lighting and no gradient or vignette, crisp clean edges, no props, no table, no watermark. Vertical 2:3 composition.${extra ? ` ${extra}` : ""}`;
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
