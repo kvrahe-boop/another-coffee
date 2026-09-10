@@ -167,11 +167,13 @@ function Products() {
     sizes: [],
     modifierGroupIds: [],
     upsellProductIds: [],
+    comboProductIds: [],
     available: true,
     hidden: false,
     sortOrder: menu.products.length,
     cupStyle: "kraft",
     garnish: "",
+    imagePrompt: "",
   });
 
   if (editing)
